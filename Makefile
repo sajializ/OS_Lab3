@@ -183,6 +183,8 @@ UPROGS=\
 	_zombie\
 	_set_tickets\
 	_set_proc_queue\
+	_set_bjf_params_in_proc\
+	_set_bjf_params_in_system\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -252,7 +254,7 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
-	set_tickets.c set_proc_queue.c printf.c umalloc.c\
+	set_tickets.c set_bjf_params_in_proc.c set_bjf_params_in_proc.c set_proc_queue.c printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
 

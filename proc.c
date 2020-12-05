@@ -325,7 +325,15 @@ wait(void)
 void
 get_old(void)
 {
-
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->waited_cycles > 10000 && p->q_num != ROUND_ROBIN_QUEUE)
+    {
+      p->waited_cycles = 0;
+      p->q_num = ROUND_ROBIN_QUEUE;
+    }
+  }
 }
 
 struct proc*
@@ -434,13 +442,11 @@ get_next_proc(void)
 void
 update_waited_cycles(struct proc* executing_proc)
 {
-  executing_proc->waited_cycles = 0;
-
   struct proc *p;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if (p != executing_proc)
-      p->waited_cycles += 1;
-  }
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    p->waited_cycles += 1;
+  
+  executing_proc->waited_cycles = 0;
 }
 
 //PAGEBREAK: 42
@@ -473,6 +479,7 @@ scheduler(void)
     if (p != NULL_PROC) 
     {
       update_waited_cycles(p);
+      get_old();
       p->executed_cycles += 0.1;
       c->proc = p;
       switchuvm(p);
@@ -690,4 +697,28 @@ set_proc_queue(int pid, int q_num)
       return;
     }
   }
+}
+
+void
+set_bjf_params_in_proc(int pid, int pratio, int atratio, int excratio)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
+      p->priority_ratio = pratio;
+      p->arrival_time_ratio = atratio;
+      p->executed_cycles_ratio = excratio;
+      return;
+    }
+  }
+}
+
+void
+set_bjf_params_in_system(int pratio, int atratio, int excratio)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    set_bjf_params_in_proc(p->pid, pratio, atratio, excratio);
+  }
+  return;
 }

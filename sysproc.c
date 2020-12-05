@@ -123,12 +123,42 @@ sys_set_tickets(void)
 int
 sys_set_bjf_params_in_proc(void)
 {
+  int pid;
+  if(argint(0, &pid) < 0)
+    return -1;
+
+  int pratio;
+  if(argint(1, &pratio) < 0)
+    return -1;
+
+  int atratio;
+  if(argint(2, &atratio) < 0)
+    return -1;
+  
+  int ecratio;
+  if(argint(3, &ecratio) < 0)
+    return -1;
+
+  set_bjf_params_in_proc(pid, pratio, atratio, ecratio);
   return 0;
 }
 
 int
 sys_set_bjf_params_in_system(void)
 {
+  int pratio;
+  if(argint(0, &pratio) < 0)
+    return -1;
+
+  int atratio;
+  if(argint(1, &atratio) < 0)
+    return -1;
+  
+  int ecratio;
+  if(argint(2, &ecratio) < 0)
+    return -1;
+  
+  set_bjf_params_in_system(pratio, atratio, ecratio);
   return 0;
 }
 
