@@ -92,6 +92,16 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
+  p->q_num = BJF_QUEUE;
+  p->waited_cycles = 0;
+  p->executed_cycles = 0;
+  acquire(&tickslock);
+  p->arrival_time = ticks;
+  release(&tickslock);
+  p->tickets = 10;
+  p->priority_ratio = 1;
+  p->arrival_time_ratio = 1;
+  p->executed_cycles_ratio = 1;
   p->pid = nextpid++;
 
   release(&ptable.lock);
@@ -340,7 +350,12 @@ round_robin(void)
 struct proc *
 lottery(void)
 {
-  struct proc *p = 0;
+  struct proc *p = NULL_PROC;
+  uint total_tickets = 0;
+  uint cur_tickets = 0;
+  uint random_ticket;
+  uint random_number;
+  int has_proc = 0;
 
   return p;
 }
@@ -348,15 +363,34 @@ lottery(void)
 struct proc *
 bjf(void)
 {
-  struct proc *p = 0;
+  struct proc *p;
+  struct proc *return_value = NULL_PROC;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != RUNNABLE || p->q_num != BJF_QUEUE)
+      continue;
+    
+    if (return_value == NULL_PROC)
+      return_value = p;
 
-  return p;
+    float rank_p = (p->priority_ratio / p->tickets) + (p->arrival_time * p->arrival_time_ratio) + (p->executed_cycles * p->executed_cycles_ratio); 
+    float rank_rv = (return_value->priority_ratio / return_value->tickets) + (return_value->arrival_time * return_value->arrival_time_ratio) + (return_value->executed_cycles * return_value->executed_cycles_ratio); 
+    if (rank_p < rank_rv)
+      return_value = p;
+  }
+
+  return return_value;
 }
 
 struct proc *
 get_next_proc(void)
 {
-  struct proc *p = 0;
+  struct proc *p = round_robin();
+  
+  if (p == NULL_PROC)
+    p = lottery();
+  
+  if (p == NULL_PROC)
+    p = bjf();
 
   return p;
 }
@@ -382,14 +416,13 @@ void scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    {
-      if (p->state != RUNNABLE)
-        continue;
-
+    p = get_next_proc();
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+    if (p != NULL_PROC) 
+    {
+      p->executed_cycles += 0.1;
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
@@ -582,9 +615,34 @@ void procdump(void)
   }
 }
 
+void adjust_columns(int space_ahead)
+{
+  if (space_ahead <= 0)
+    return;
+  for (int i = 0; i < space_ahead; i++)
+    cprintf(" ");
+}
+
+int
+count_digits(int number)
+{
+  int digits = 0;
+  if (number == 0)
+    digits++;
+  else
+  {
+    while(number != 0)
+    {
+      number /= 10;
+      digits++;
+    }
+  }
+  return digits;
+}
+
 double calculate_rank(struct proc *p)
 {
-  float priority = 1 / p->ticket;
+  float priority = 1 / p->tickets;
   float priority_share = priority * p->priority_ratio;
   float arrival_time_share = p->arrival_time * p->arrival_time_ratio;
   float executed_cycles_share = p->executed_cycles * p->executed_cycles_ratio;
@@ -644,7 +702,7 @@ void print_info(void)
   for (int i = 0; i < table_columns; i++)
   {
     cprintf("%s", titles_str[i]);
-    print_spaces(max_column_lens[i] - strlen(titles_str[i]));
+    adjust_columns(max_column_lens[i] - strlen(titles_str[i]));
   }
   cprintf("\n---------------------------------------------------------------------------------\n");
 
@@ -659,13 +717,13 @@ void print_info(void)
       continue;
     state = states[p->state];
     cprintf("%s", p->name);
-    print_spaces(max_column_lens[NAME] - strlen(p->name));
+    adjust_columns(max_column_lens[NAME] - strlen(p->name));
     cprintf("%d", p->pid);
-    print_spaces(max_column_lens[PID] - count_num_of_digits(p->pid));
+    adjust_columns(max_column_lens[PID] - count_digits(p->pid));
     cprintf("%s", state);
-    print_spaces(max_column_lens[STATE] - strlen(state));
+    adjust_columns(max_column_lens[STATE] - strlen(state));
     cprintf("%d", p->q_num);
-    print_spaces(max_column_lens[QUEUE_NUM] - count_num_of_digits(p->q_num));
+    adjust_columns(max_column_lens[QUEUE_NUM] - count_digits(p->q_num));
     if (p->q_num != LOTTERY_QUEUE)
     {
       cprintf("--");
@@ -673,32 +731,32 @@ void print_info(void)
     }
     else
     {
-      cprintf("%d", p->ticket);
-      ticket_len = count_num_of_digits(p->ticket);
+      cprintf("%d", p->tickets);
+      ticket_len = count_digits(p->tickets);
     }
-    print_spaces(max_column_lens[TICKET] - ticket_len);
+    adjust_columns(max_column_lens[TICKET] - ticket_len);
 
     char executed_cycles_str[30];
     float_to_string(p->executed_cycles, executed_cycles_str, CYCLES_PRECISION);
 
     cprintf("%s", executed_cycles_str);
-    print_spaces(max_column_lens[CYCLES] - strlen(executed_cycles_str));
+    adjust_columns(max_column_lens[CYCLES] - strlen(executed_cycles_str));
 
     char priority_ratio_str[30];
     float_to_string(p->priority_ratio, priority_ratio_str, RATIO_PRECISION);
     cprintf("%s", priority_ratio_str);
-    print_spaces(max_column_lens[PRIORITY_RATIO] - strlen(priority_ratio_str));
+    adjust_columns(max_column_lens[PRIORITY_RATIO] - strlen(priority_ratio_str));
 
     char arrival_time_ratio_str[30];
     float_to_string(p->arrival_time_ratio, arrival_time_ratio_str, RATIO_PRECISION);
     cprintf("%s", arrival_time_ratio_str);
-    print_spaces(max_column_lens[ARRIVAL_TIME_RATIO] - strlen(arrival_time_ratio_str));
+    adjust_columns(max_column_lens[ARRIVAL_TIME_RATIO] - strlen(arrival_time_ratio_str));
 
 
     char executed_cycles_ratio_str[30];
     float_to_string(p->executed_cycles_ratio, executed_cycles_ratio_str, RATIO_PRECISION);
     cprintf("%s", executed_cycles_ratio_str);
-    print_spaces(max_column_lens[EXECUTED_CYCLES_RATIO] - strlen(executed_cycles_ratio_str));
+    adjust_columns(max_column_lens[EXECUTED_CYCLES_RATIO] - strlen(executed_cycles_ratio_str));
 
 
     double rank = calculate_rank(&p);
@@ -711,4 +769,27 @@ void print_info(void)
   }
   release(&ptable.lock);
   return 0;
+}
+void
+set_tickets(int pid, int tickets)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
+      p->tickets = tickets;
+      return;
+    }
+  }
+}
+
+void
+set_proc_queue(int pid, int q_num)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
+      p->q_num = q_num;
+      return;
+    }
+  }
 }

@@ -91,14 +91,32 @@ sys_uptime(void)
 }
 
 int
-sys_change_proc_queue(void)
+sys_set_proc_queue(void)
 {
+  int pid;
+  if(argint(0, &pid) < 0)
+    return -1;
+
+  int q_num;
+  if(argint(1, &q_num) < 0)
+    return -1;
+  
+  set_proc_queue(pid, q_num);
   return 0;
 }
 
 int
-sys_initial_ticket(void)
+sys_set_tickets(void)
 {
+  int pid;
+  if(argint(0, &pid) < 0)
+    return -1;
+
+  int tickets;
+  if(argint(1, &tickets) < 0)
+    return -1;
+
+  set_tickets(pid, tickets);
   return 0;
 }
 
