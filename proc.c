@@ -87,6 +87,16 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
+  p->q_num = BJF_QUEUE;
+  p->waited_cycles = 0;
+  p->executed_cycles = 0;
+  acquire(&tickslock);
+  p->arrival_time = ticks;
+  release(&tickslock);
+  p->tickets = 10;
+  p->priority_ratio = 1;
+  p->arrival_time_ratio = 1;
+  p->executed_cycles_ratio = 1;
   p->pid = nextpid++;
 
   release(&ptable.lock);
@@ -318,11 +328,15 @@ get_old(void)
 }
 
 struct proc*
-round_robin(void)
+round_robin()
 {
-  struct proc *p = 0;
-
-
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != RUNNABLE || p->q_num != ROUND_ROBIN_QUEUE)
+        continue;
+    return p;
+  }
+  p = NULL_PROC;
   return p;
 }
 
@@ -338,10 +352,22 @@ lottery(void)
 struct proc*
 bjf(void)
 {
-  struct proc *p = 0;
+  struct proc *p;
+  struct proc *return_value = NULL_PROC;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != RUNNABLE || p->q_num != BJF_QUEUE)
+      continue;
+    
+    if (return_value == NULL_PROC)
+      return_value = p;
 
+    float rank_p = (p->priority_ratio / p->tickets) + (p->arrival_time * p->arrival_time_ratio) + (p->executed_cycles * p->executed_cycles_ratio); 
+    float rank_rv = (return_value->priority_ratio / return_value->tickets) + (return_value->arrival_time * return_value->arrival_time_ratio) + (return_value->executed_cycles * return_value->executed_cycles_ratio); 
+    if (rank_p < rank_rv)
+      return_value = p;
+  }
 
-  return p;
+  return return_value;
 }
 
 struct proc*
@@ -379,13 +405,15 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
+    // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    //   if(p->state != RUNNABLE)
+    //     continue;
+      p = bjf();
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+      if (p != NULL_PROC) {
+
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;

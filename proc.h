@@ -59,6 +59,7 @@ struct proc {
   int waited_cycles;
   int executed_cycles;
   int arrival_time;
+  int tickets;
   int priority_ratio;
   int arrival_time_ratio;
   int executed_cycles_ratio;
