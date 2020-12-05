@@ -607,3 +607,27 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+void
+set_tickets(int pid, int tickets)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
+      p->tickets = tickets;
+      return;
+    }
+  }
+}
+
+void
+set_proc_queue(int pid, int q_num)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
+      p->q_num = q_num;
+      return;
+    }
+  }
+}

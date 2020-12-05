@@ -125,6 +125,9 @@ struct proc*    lottery(void);
 struct proc*    bjf(void);
 struct proc*    get_next_proc(void);
 void            get_old(void);
+void            set_tickets(int, int);
+void            set_proc_queue(int, int);
+
 
 // swtch.S
 void            swtch(struct context**, struct context*);
