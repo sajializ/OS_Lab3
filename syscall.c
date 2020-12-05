@@ -103,8 +103,8 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
-extern int sys_change_proc_queue(void);
-extern int sys_initial_ticket(void);
+extern int sys_set_proc_queue(void);
+extern int sys_set_tickets(void);
 extern int sys_set_bjf_params_in_proc(void);
 extern int sys_set_bjf_params_in_system(void);
 extern int sys_print_info(void);
@@ -131,8 +131,8 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_change_proc_queue] sys_change_proc_queue,
-[SYS_initial_ticket]  sys_initial_ticket,
+[SYS_set_proc_queue] sys_set_proc_queue,
+[SYS_set_tickets]  sys_set_tickets,
 [SYS_set_bjf_params_in_proc]  sys_set_bjf_params_in_proc,
 [SYS_set_bjf_params_in_system]  sys_set_bjf_params_in_system,
 [SYS_print_info]  sys_print_info,

@@ -343,10 +343,38 @@ round_robin()
 struct proc*
 lottery(void)
 {
-  struct proc *p = 0;
+  struct proc *p = NULL_PROC;
+  uint total_tickets = 0;
+  uint cur_tickets = 0;
+  uint random_ticket;
+  uint random_number;
+  int has_proc = 0;
 
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != RUNNABLE || p->q_num != LOTTERY_QUEUE)
+      continue;
 
-  return p;
+    total_tickets += p->tickets;
+    has_proc = 1;
+  }
+
+  if(has_proc){
+    random_number = ticks;
+    random_ticket = (random_number) % total_tickets;
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE || p->q_num != LOTTERY_QUEUE)
+        continue;
+
+      cur_tickets += p->tickets;
+
+      if(random_ticket < cur_tickets){
+        return p;
+      }
+    }
+  }
+
+  return NULL_PROC;
 }
 
 struct proc*
@@ -605,5 +633,29 @@ procdump(void)
         cprintf(" %p", pc[i]);
     }
     cprintf("\n");
+  }
+}
+
+void
+set_tickets(int pid, int tickets)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
+      p->tickets = tickets;
+      return;
+    }
+  }
+}
+
+void
+set_proc_queue(int pid, int q_num)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid){
+      p->q_num = q_num;
+      return;
+    }
   }
 }
