@@ -347,8 +347,13 @@ bjf(void)
 struct proc*
 get_next_proc(void)
 {
-  struct proc *p = 0;
-
+  struct proc *p = round_robin();
+  
+  if (p == NULL_PROC)
+    p = lottery();
+  
+  if (p == NULL_PROC)
+    p = bjf();
 
   return p;
 }
