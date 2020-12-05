@@ -1,3 +1,9 @@
+// Scheduler defines
+#define NULL_PROC 0
+#define ROUND_ROBIN_QUEUE 1
+#define LOTTERY_QUEUE 2
+#define BJF_QUEUE 3
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -49,6 +55,13 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  int q_num;
+  int waited_cycles;
+  int executed_cycles;
+  int arrival_time;
+  int priority_ratio;
+  int arrival_time_ratio;
+  int executed_cycles_ratio;
 };
 
 // Process memory is laid out contiguously, low addresses first:

@@ -120,6 +120,11 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+struct proc*    round_robin(void);
+struct proc*    lottery(void);
+struct proc*    bjf(void);
+struct proc*    get_next_proc(void);
+void            get_old(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

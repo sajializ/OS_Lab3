@@ -23,6 +23,11 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+void change_proc_queue(int, int);
+void initial_ticket(int, int);
+void set_bjf_params_in_proc(int, int, int, int);
+void set_bjf_params_in_system(int, int, int);
+void print_info();
 
 // ulib.c
 int stat(const char*, struct stat*);

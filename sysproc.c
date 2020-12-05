@@ -89,3 +89,34 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_change_proc_queue(void)
+{
+  return 0;
+}
+
+int
+sys_initial_ticket(void)
+{
+  return 0;
+}
+
+int
+sys_set_bjf_params_in_proc(void)
+{
+  return 0;
+}
+
+int
+sys_set_bjf_params_in_system(void)
+{
+  return 0;
+}
+
+int
+sys_print_info(void)
+{
+  return 0;
+}
+

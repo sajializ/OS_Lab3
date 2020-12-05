@@ -311,6 +311,48 @@ wait(void)
   }
 }
 
+void
+get_old(void)
+{
+
+}
+
+struct proc*
+round_robin(void)
+{
+  struct proc *p = 0;
+
+
+  return p;
+}
+
+struct proc*
+lottery(void)
+{
+  struct proc *p = 0;
+
+
+  return p;
+}
+
+struct proc*
+bjf(void)
+{
+  struct proc *p = 0;
+
+
+  return p;
+}
+
+struct proc*
+get_next_proc(void)
+{
+  struct proc *p = 0;
+
+
+  return p;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
