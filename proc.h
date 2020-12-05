@@ -60,9 +60,9 @@ struct proc {
   float executed_cycles;
   int arrival_time;
   int tickets;
-  float priority_ratio;
-  float arrival_time_ratio;
-  float executed_cycles_ratio;
+  int priority_ratio;
+  int arrival_time_ratio;
+  int executed_cycles_ratio;
 };
 
 // Process memory is laid out contiguously, low addresses first:
