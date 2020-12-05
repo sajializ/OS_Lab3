@@ -10,6 +10,7 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  struct proc *prev_proc;
 } ptable;
 
 static struct proc *initproc;
@@ -87,7 +88,7 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
-  p->q_num = BJF_QUEUE;
+  p->q_num = LOTTERY_QUEUE;
   p->waited_cycles = 0;
   p->executed_cycles = 0;
   acquire(&tickslock);
@@ -331,11 +332,28 @@ struct proc*
 round_robin()
 {
   struct proc *p;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+  for(p = ptable.prev_proc; p < &ptable.proc[NPROC]; p++){
     if(p->state != RUNNABLE || p->q_num != ROUND_ROBIN_QUEUE)
         continue;
+    
+    if (p < &ptable.proc[NPROC - 1])
+      ptable.prev_proc = p + 1;
+    else
+      ptable.prev_proc = ptable.proc;
     return p;
   }
+
+  for(p = ptable.proc; p < ptable.prev_proc; p++){
+    if(p->state != RUNNABLE || p->q_num != ROUND_ROBIN_QUEUE)
+        continue;
+    
+    if (p < &ptable.proc[NPROC - 1])
+      ptable.prev_proc = p + 1;
+    else
+      ptable.prev_proc = ptable.proc;
+    return p;
+  }
+
   p = NULL_PROC;
   return p;
 }
@@ -382,19 +400,20 @@ bjf(void)
 {
   struct proc *p;
   struct proc *return_value = NULL_PROC;
+  float rank_p = 0;
+  float rank_rv = -1;
+
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state != RUNNABLE || p->q_num != BJF_QUEUE)
       continue;
+
+    rank_p = (p->priority_ratio / p->tickets) + (p->arrival_time * p->arrival_time_ratio) + (p->executed_cycles * p->executed_cycles_ratio); 
     
-    if (return_value == NULL_PROC)
+    if (rank_rv == -1 || rank_p < rank_rv){
+      rank_rv = rank_p;
       return_value = p;
-
-    float rank_p = (p->priority_ratio / p->tickets) + (p->arrival_time * p->arrival_time_ratio) + (p->executed_cycles * p->executed_cycles_ratio); 
-    float rank_rv = (return_value->priority_ratio / return_value->tickets) + (return_value->arrival_time * return_value->arrival_time_ratio) + (return_value->executed_cycles * return_value->executed_cycles_ratio); 
-    if (rank_p < rank_rv)
-      return_value = p;
+    }
   }
-
   return return_value;
 }
 
@@ -427,6 +446,7 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   
+  ptable.prev_proc = ptable.proc;
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -434,9 +454,9 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     p = get_next_proc();
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
+    // Switch to chosen process.  It is the process's job
+    // to release ptable.lock and then reacquire it
+    // before jumping back to us.
     if (p != NULL_PROC) 
     {
       p->executed_cycles += 0.1;
