@@ -431,6 +431,18 @@ get_next_proc(void)
   return p;
 }
 
+void
+update_waited_cycles(struct proc* executing_proc)
+{
+  executing_proc->waited_cycles = 0;
+
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p != executing_proc)
+      p->waited_cycles += 1;
+  }
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -454,11 +466,13 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     p = get_next_proc();
+
     // Switch to chosen process.  It is the process's job
     // to release ptable.lock and then reacquire it
     // before jumping back to us.
     if (p != NULL_PROC) 
     {
+      update_waited_cycles(p);
       p->executed_cycles += 0.1;
       c->proc = p;
       switchuvm(p);
