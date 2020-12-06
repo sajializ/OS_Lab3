@@ -127,8 +127,10 @@ struct proc*    get_next_proc(void);
 void            get_old(void);
 void            set_tickets(int, int);
 void            set_proc_queue(int, int);
+void            update_waited_cycles(struct proc*);
 void            set_bjf_params_in_proc(int, int, int, int);
 void            set_bjf_params_in_system(int, int, int);
+void 		print_info(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

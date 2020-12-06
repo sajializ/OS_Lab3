@@ -165,6 +165,7 @@ sys_set_bjf_params_in_system(void)
 int
 sys_print_info(void)
 {
+  print_info();
   return 0;
 }
 

@@ -7,6 +7,9 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#define CYCLES_PRECISION 1
+#define RATIO_PRECISION 3
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -439,6 +442,16 @@ get_next_proc(void)
   return p;
 }
 
+void
+update_waited_cycles(struct proc* executing_proc)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    p->waited_cycles += 1;
+  
+  executing_proc->waited_cycles = 0;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -462,11 +475,13 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     p = get_next_proc();
+
     // Switch to chosen process.  It is the process's job
     // to release ptable.lock and then reacquire it
     // before jumping back to us.
     if (p != NULL_PROC) 
     {
+      update_waited_cycles(p);
       get_old();
       p->executed_cycles += 0.1;
       c->proc = p;
@@ -709,4 +724,222 @@ set_bjf_params_in_system(int pratio, int atratio, int excratio)
     set_bjf_params_in_proc(p->pid, pratio, atratio, excratio);
   }
   return;
+}
+
+// print
+void adjust_columns(int space_ahead)
+{
+  for (int i = 0; i < space_ahead; i++)
+    cprintf(" ");
+  return;
+}
+
+int
+count_digits(int number)
+{
+  int digits = 0;
+  if (number == 0)
+  {
+    digits = 1;
+  }
+  else
+  {
+    while(number != 0)
+    {
+      number /= 10;
+      digits++;
+    }
+  }
+  return digits;
+}
+
+void reverse_string(char* str, int strlen) 
+{ 
+    int start = 0, end = strlen - 1, temp; 
+    while (start < end) { 
+        temp = str[start]; 
+        str[start] = str[end]; 
+        str[end] = temp; 
+        start++; 
+        end--; 
+    } 
+} 
+
+
+int itoa(int num, char snum[], int base) 
+{ 
+    int i = 0; 
+
+    if(num == 0)
+      snum[i++] = '0';
+
+    while (num) { 
+        snum[i++] = (num % 10) + '0'; 
+        num = num / 10; 
+    } 
+  
+    while (i < base) 
+        snum[i++] = '0'; 
+  
+    reverse_string(snum, i); 
+    snum[i] = '\0'; 
+    return i; 
+} 
+
+int pow(int x, unsigned int y) 
+{ 
+    if (y == 0) 
+        return 1; 
+    else if (y % 2 == 0) 
+        return pow(x, y / 2) * pow(x, y / 2); 
+    else
+        return x * pow(x, y / 2) * pow(x, y / 2); 
+} 
+  
+void gcvt(float num, char* snum, int precision) 
+{ 
+    int integer = (int)num; 
+  
+    float fraction = num - (float)integer; 
+  
+    int i = itoa(integer, snum, 0); 
+  
+    if (precision != 0) { 
+        snum[i] = '.'; 
+  
+        fraction = fraction * pow(10, precision); 
+  
+        itoa((int)fraction, snum + i + 1, precision); 
+    } 
+}
+
+
+
+double calculate_rank(struct proc *p)
+{
+  float priority_share = p->priority_ratio / p->tickets;
+  float arrival_time_share = p->arrival_time * p->arrival_time_ratio;
+  float executed_cycles_share = p->executed_cycles * p->executed_cycles_ratio;
+  return priority_share + arrival_time_share + executed_cycles_share;
+}
+
+void print_info(void)
+{
+  static char *states[] = {
+      [UNUSED] "UNUSED",
+      [EMBRYO] "EMBRYO",
+      [SLEEPING] "SLEEPING",
+      [RUNNABLE] "RUNNABLE",
+      [RUNNING] "RUNNING",
+      [ZOMBIE] "ZOMBIE"};
+
+  enum column_names
+  {
+    NAME,
+    PID,
+    STATE,
+    QUEUE_NUM,
+    TICKET,
+    PRIORITY_RATIO,
+    ARRIVAL_TIME_RATIO,
+    EXECUTED_CYCLES_RATIO,
+    RANK,
+    CYCLES
+  };
+  static const int table_columns = 10;
+
+  static const char *titles_str[] = {
+      [NAME] "name",
+      [PID] "pid",
+      [STATE] "state",
+      [QUEUE_NUM] "queue_num",
+      [TICKET] "ticket",
+      [PRIORITY_RATIO] "priority",
+      [ARRIVAL_TIME_RATIO] "arrival_time",
+      [EXECUTED_CYCLES_RATIO] "executed_cycles",
+      [RANK] "rank",
+      [CYCLES] "cycles",
+  };
+  int min_space_between_words = 4;
+  int max_column_lens[] = {
+      [NAME] 15 + min_space_between_words,
+      [PID] strlen(titles_str[PID]) + min_space_between_words,
+      [STATE] 8 + min_space_between_words,
+      [QUEUE_NUM] strlen(titles_str[QUEUE_NUM]) + min_space_between_words,
+      [TICKET] strlen(titles_str[TICKET]) + min_space_between_words,
+      [PRIORITY_RATIO] 8 + min_space_between_words,
+      [ARRIVAL_TIME_RATIO] 12 + min_space_between_words,
+      [EXECUTED_CYCLES_RATIO] 14 + min_space_between_words,
+      [RANK] 5 + min_space_between_words,
+      [CYCLES] strlen(titles_str[CYCLES]) + min_space_between_words};
+
+  for (int i = 0; i < table_columns; i++)
+  {
+    cprintf("%s", titles_str[i]);
+    adjust_columns(max_column_lens[i] - strlen(titles_str[i]));
+  }
+  cprintf("\n--------------------------------------------------------------------------------------------------------------------------\n");
+
+  struct proc *p;
+  char *state;
+  int ticket_len;
+
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->pid == 0)
+      continue;
+    state = states[p->state];
+    cprintf("%s", p->name);
+    adjust_columns(max_column_lens[NAME] - strlen(p->name));
+    cprintf("%d", p->pid);
+    adjust_columns(max_column_lens[PID] - count_digits(p->pid));
+    cprintf("%s", state);
+    adjust_columns(max_column_lens[STATE] - strlen(state));
+    cprintf("%d", p->q_num);
+    adjust_columns(max_column_lens[QUEUE_NUM] - count_digits(p->q_num));
+    if (p->q_num != LOTTERY_QUEUE)
+    {
+      cprintf("--");
+      ticket_len = 2;
+    }
+    else
+    {
+      cprintf("%d", p->tickets);
+      ticket_len = count_digits(p->tickets);
+    }
+    adjust_columns(max_column_lens[TICKET] - ticket_len);
+
+    char priority_ratio_str[30];
+    gcvt(p->priority_ratio, priority_ratio_str, 0);
+    cprintf("%s", priority_ratio_str);
+    adjust_columns(max_column_lens[PRIORITY_RATIO] - strlen(priority_ratio_str));
+
+    char arrival_time_ratio_str[30];
+    gcvt(p->arrival_time_ratio, arrival_time_ratio_str, 0);
+    cprintf("%s", arrival_time_ratio_str);
+    adjust_columns(max_column_lens[ARRIVAL_TIME_RATIO] - strlen(arrival_time_ratio_str));
+
+
+    char executed_cycles_ratio_str[30];
+    gcvt(p->executed_cycles_ratio, executed_cycles_ratio_str, 0);
+    cprintf("%s", executed_cycles_ratio_str);
+    adjust_columns(max_column_lens[EXECUTED_CYCLES_RATIO] - strlen(executed_cycles_ratio_str));
+
+
+    double rank = calculate_rank(p);
+
+    char rank_str[30];
+    gcvt(rank, rank_str, RATIO_PRECISION);
+
+    cprintf("%s", rank_str);
+    adjust_columns(max_column_lens[RANK] - strlen(rank_str));
+    
+    char cycles_str[30];
+    gcvt(p->executed_cycles, cycles_str, CYCLES_PRECISION);
+
+    cprintf("%s\n", cycles_str);
+    cprintf("\n");
+  }
+  release(&ptable.lock);
 }
