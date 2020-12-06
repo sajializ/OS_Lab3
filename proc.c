@@ -482,7 +482,7 @@ scheduler(void)
     if (p != NULL_PROC) 
     {
       update_waited_cycles(p);
-      get_old();
+   //   get_old();
       p->executed_cycles += 0.1;
       c->proc = p;
       switchuvm(p);
@@ -721,7 +721,9 @@ set_bjf_params_in_system(int pratio, int atratio, int excratio)
 {
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    set_bjf_params_in_proc(p->pid, pratio, atratio, excratio);
+    p->priority_ratio = pratio;
+    p->arrival_time_ratio = atratio;
+    p->executed_cycles_ratio = excratio;
   }
   return;
 }
@@ -820,7 +822,7 @@ double calculate_rank(struct proc *p)
   float priority_share = p->priority_ratio / p->tickets;
   float arrival_time_share = p->arrival_time * p->arrival_time_ratio;
   float executed_cycles_share = p->executed_cycles * p->executed_cycles_ratio;
-  return priority_share + arrival_time_share + executed_cycles_share;
+  return (priority_share + arrival_time_share + executed_cycles_share);
 }
 
 void print_info(void)
@@ -854,22 +856,22 @@ void print_info(void)
       [STATE] "state",
       [QUEUE_NUM] "queue_num",
       [TICKET] "ticket",
-      [PRIORITY_RATIO] "priority",
-      [ARRIVAL_TIME_RATIO] "arrival_time",
-      [EXECUTED_CYCLES_RATIO] "executed_cycles",
+      [PRIORITY_RATIO] "priority_ratio",
+      [ARRIVAL_TIME_RATIO] "arrival_time_ratio",
+      [EXECUTED_CYCLES_RATIO] "executed_cycles_ratio",
       [RANK] "rank",
       [CYCLES] "cycles",
   };
-  int min_space_between_words = 4;
+  int min_space_between_words = 8;
   int max_column_lens[] = {
-      [NAME] 15 + min_space_between_words,
+      [NAME] 10 + min_space_between_words,
       [PID] strlen(titles_str[PID]) + min_space_between_words,
       [STATE] 8 + min_space_between_words,
       [QUEUE_NUM] strlen(titles_str[QUEUE_NUM]) + min_space_between_words,
       [TICKET] strlen(titles_str[TICKET]) + min_space_between_words,
-      [PRIORITY_RATIO] 8 + min_space_between_words,
+      [PRIORITY_RATIO] 10 + min_space_between_words,
       [ARRIVAL_TIME_RATIO] 12 + min_space_between_words,
-      [EXECUTED_CYCLES_RATIO] 14 + min_space_between_words,
+      [EXECUTED_CYCLES_RATIO] 15 + min_space_between_words,
       [RANK] 5 + min_space_between_words,
       [CYCLES] strlen(titles_str[CYCLES]) + min_space_between_words};
 
@@ -878,7 +880,7 @@ void print_info(void)
     cprintf("%s", titles_str[i]);
     adjust_columns(max_column_lens[i] - strlen(titles_str[i]));
   }
-  cprintf("\n--------------------------------------------------------------------------------------------------------------------------\n");
+  cprintf("\n------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
   struct proc *p;
   char *state;
@@ -898,16 +900,9 @@ void print_info(void)
     adjust_columns(max_column_lens[STATE] - strlen(state));
     cprintf("%d", p->q_num);
     adjust_columns(max_column_lens[QUEUE_NUM] - count_digits(p->q_num));
-    if (p->q_num != LOTTERY_QUEUE)
-    {
-      cprintf("--");
-      ticket_len = 2;
-    }
-    else
-    {
-      cprintf("%d", p->tickets);
-      ticket_len = count_digits(p->tickets);
-    }
+    cprintf("%d", p->tickets);
+    ticket_len = count_digits(p->tickets);
+
     adjust_columns(max_column_lens[TICKET] - ticket_len);
 
     char priority_ratio_str[30];

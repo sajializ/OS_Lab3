@@ -17,13 +17,13 @@ int main(int argc, char const *argv[])
 	{
 	    if (i == 2)
 	    {
-		set_proc_queue(pid, 3);
+		//set_proc_queue(pid, 3);
 		set_tickets(pid, 30);
 	    }
 
 	    else if (i == 4)
 	    {
-		set_proc_queue(pid, 3);
+		//set_proc_queue(pid, 3);
 	    }
 
 	    else if (i == 6)
@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
 
 	    else if (i == 8)
 	    {
-		set_proc_queue(pid, 2);
+		//set_proc_queue(pid, 2);
 		set_tickets(pid, 15);
 	    }
 
