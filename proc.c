@@ -331,8 +331,9 @@ get_old(void)
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-    if(p->waited_cycles > 10000 && p->q_num != ROUND_ROBIN_QUEUE)
+    if(p->state == RUNNABLE && p->waited_cycles > 10000)
     {
+      cprintf("%d\n", p->waited_cycles);
       p->waited_cycles = 0;
       p->q_num = ROUND_ROBIN_QUEUE;
     }
@@ -402,8 +403,8 @@ lottery(void)
       }
     }
   }
-
-  return NULL_PROC;
+  p = NULL_PROC;
+  return p;
 }
 
 struct proc*
@@ -447,7 +448,8 @@ update_waited_cycles(struct proc* executing_proc)
 {
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    p->waited_cycles += 1;
+    if (p->state == RUNNABLE)
+      p->waited_cycles += 1;
   
   executing_proc->waited_cycles = 0;
 }
@@ -482,7 +484,7 @@ scheduler(void)
     if (p != NULL_PROC) 
     {
       update_waited_cycles(p);
-   //   get_old();
+      get_old();
       p->executed_cycles += 0.1;
       c->proc = p;
       switchuvm(p);
@@ -931,7 +933,7 @@ void print_info(void)
     adjust_columns(max_column_lens[RANK] - strlen(rank_str));
     
     char cycles_str[30];
-    gcvt(p->executed_cycles, cycles_str, CYCLES_PRECISION);
+    gcvt(p->waited_cycles, cycles_str, CYCLES_PRECISION);
 
     cprintf("%s\n", cycles_str);
     cprintf("\n");
