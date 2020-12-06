@@ -337,7 +337,10 @@ get_old(void)
     if(p->state == RUNNABLE && p->waited_cycles > 10000)
     {
       p->waited_cycles = 0;
-      p->q_num = ROUND_ROBIN_QUEUE;
+      if (p->q_num == LOTTERY_QUEUE)
+        p->q_num = ROUND_ROBIN_QUEUE;
+      else if(p->q_num == BJF_QUEUE)
+        p->q_num = LOTTERY_QUEUE;
     }
   }
 }
@@ -451,7 +454,7 @@ update_waited_cycles(struct proc* executing_proc)
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == RUNNABLE)
-      p->waited_cycles += 1;
+      p->waited_cycles += 0.1;
   
   executing_proc->waited_cycles = 0;
 }
