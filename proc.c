@@ -203,6 +203,9 @@ fork(void)
     return -1;
   }
 
+  if (curproc->name[0] == 's' && curproc->name[1] == 'h' && curproc->name[2] == 0)
+    np->q_num = ROUND_ROBIN_QUEUE;
+
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
@@ -333,7 +336,6 @@ get_old(void)
   {
     if(p->state == RUNNABLE && p->waited_cycles > 10000)
     {
-      cprintf("%d\n", p->waited_cycles);
       p->waited_cycles = 0;
       p->q_num = ROUND_ROBIN_QUEUE;
     }
@@ -933,7 +935,7 @@ void print_info(void)
     adjust_columns(max_column_lens[RANK] - strlen(rank_str));
     
     char cycles_str[30];
-    gcvt(p->waited_cycles, cycles_str, CYCLES_PRECISION);
+    gcvt(p->executed_cycles, cycles_str, CYCLES_PRECISION);
 
     cprintf("%s\n", cycles_str);
     cprintf("\n");

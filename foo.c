@@ -3,7 +3,7 @@
 #include "user.h"
 #include "fcntl.h"
 
-#define PROCESS_COUNT 10
+#define PROCESS_COUNT 8
 #define UPPER_BOUND 100000000
 
 int main(int argc, char const *argv[])
