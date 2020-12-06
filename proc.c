@@ -449,12 +449,12 @@ get_next_proc(void)
 }
 
 void
-update_waited_cycles(struct proc* executing_proc)
+update_waited_cycles(struct proc* executing_proc, uint cycles)
 {
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == RUNNABLE)
-      p->waited_cycles += 0.1;
+      p->waited_cycles += cycles;
   
   executing_proc->waited_cycles = 0;
 }
@@ -472,6 +472,7 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
+  uint t1, t2;
   c->proc = 0;
   
   ptable.prev_proc = ptable.proc;
@@ -481,6 +482,7 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    t1 = ticks;
     p = get_next_proc();
 
     // Switch to chosen process.  It is the process's job
@@ -488,7 +490,6 @@ scheduler(void)
     // before jumping back to us.
     if (p != NULL_PROC) 
     {
-      update_waited_cycles(p);
       get_old();
       p->executed_cycles += 0.1;
       c->proc = p;
@@ -497,7 +498,8 @@ scheduler(void)
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
-
+      t2 = ticks;
+      update_waited_cycles(p, t2 - t1);
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
